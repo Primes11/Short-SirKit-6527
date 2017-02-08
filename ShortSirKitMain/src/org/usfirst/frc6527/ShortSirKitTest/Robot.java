@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import org.usfirst.frc6527.ShortSirKitTest.commands.*;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.PIDController;
 
 
 /**
@@ -48,6 +49,11 @@ public class Robot extends IterativeRobot {
     private Encoder encR;
     private VictorSP victorSPL;
     private VictorSP victorSPR;
+    private PIDController pidL;
+    private PIDController pidR;
+    private boolean toggle;
+    private boolean reverse;
+    
     
     public void robotInit() {
     RobotMap.init();
@@ -70,8 +76,13 @@ public class Robot extends IterativeRobot {
         this.xboxController = new XboxController(0);
         this.victorSPL = new VictorSP(1);
         this.victorSPR = new VictorSP(0);
+        this.encL = new Encoder(0,1);
+        this.encR = new Encoder(2,3);
+        this.pidL = new PIDController(0.001, 0.1, 0, encL, victorSPL);
+        this.pidR = new PIDController(0.001, 0.1, 0, encR, victorSPR);
         CameraServer.getInstance().startAutomaticCapture(0);
         CameraServer.getInstance().startAutomaticCapture(1);
+        
         
     }
 
@@ -98,6 +109,9 @@ public class Robot extends IterativeRobot {
      */
     public void autonomousPeriodic() {
         Scheduler.getInstance().run();
+        reverse = false;
+        toggle = true;
+        
         
     }
 
@@ -118,42 +132,52 @@ public class Robot extends IterativeRobot {
         double xAxis = xboxController.getRawAxis(0);
         if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
         if (xAxis < 0.15 && xAxis > -0.15) xAxis = 0;
-        if (xboxController.getRawButton(8)) yAxis *= -1;
+        
+        
+        if (toggle && xboxController.getRawButton(8)) {
+        	toggle = false;
+        	if (reverse) reverse = true;
+        	else reverse = false;
+        } else if(xboxController.getRawButton(8) == false) toggle = true;
+        if (reverse) yAxis *= -1;
+        //if (xboxController.getRawButton(8)) yAxis *= -1;
+        
+        
         int pov = xboxController.getPOV();
         if (-1 != pov) pov /= 45;
         if (!(xboxController.getRawButton(5) || xboxController.getRawButton(6) || -1 != pov)) {
-        	victorSPL.set((yAxis - xAxis) / 2 / 3);
-        	victorSPR.set((yAxis + xAxis) / 2 / 2.9);
+        	pidL.setSetpoint((yAxis - xAxis) / 2 / 3);
+        	pidR.setSetpoint((yAxis + xAxis) / 2 / 3);
         } else if (xboxController.getRawButton(6)) {
-        	victorSPL.set(-0.5);
-        	victorSPR.set(-0.5);
+        	pidL.setSetpoint(-0.5);
+        	pidR.setSetpoint(-0.5);
         }else if (xboxController.getRawButton(5)) {
-        	victorSPL.set((yAxis - xAxis) / 2);
-        	victorSPR.set((yAxis + xAxis) / 2);
+        	pidL.setSetpoint((yAxis - xAxis) / 2);
+        	pidR.setSetpoint((yAxis + xAxis) / 2);
         }else if (-1 != pov){
         	switch (pov) {
-	        	case 0:	victorSPL.set(-((double)1/(double)6));
-	        			victorSPR.set(-((double)1/(double)6));
+	        	case 0:	pidL.setSetpoint(-((double)1/(double)6));
+	        			pidR.setSetpoint(-((double)1/(double)6));
 	        	break;
-	        	case 1:	victorSPL.set(-((double)1/(double)6));
-    					victorSPR.set(0);
+	        	case 1:	pidL.setSetpoint(-((double)1/(double)6));
+	        			pidR.setSetpoint(0);
     			break;
-	        	case 2:	victorSPL.set(-((double)1/(double)6));
-    					victorSPR.set(((double)1/(double)6));
+	        	case 2:	pidL.setSetpoint(-((double)1/(double)6));
+	        			pidR.setSetpoint(((double)1/(double)6));
     			break;
-	        	case 3:	victorSPL.set(((double)1/(double)6));
-    					victorSPR.set(0);
+	        	case 3:	pidL.setSetpoint(((double)1/(double)6));
+	        			pidR.setSetpoint(0);
     			break;
-	        	case 4:	victorSPL.set(((double)1/(double)6));
-    					victorSPR.set(((double)1/(double)6));
+	        	case 4:	pidL.setSetpoint(((double)1/(double)6));
+	        			pidR.setSetpoint(((double)1/(double)6));
 		    	break;
-		    	case 5:	victorSPL.set(0);
-						victorSPR.set(((double)1/(double)6));
+		    	case 5:	pidL.setSetpoint(0);
+		    			pidR.setSetpoint(((double)1/(double)6));
 				break;
-		    	case 6:	victorSPL.set(((double)1/(double)6));
+		    	case 6:	pidL.setSetpoint(((double)1/(double)6));
 						victorSPR.set(-((double)1/(double)6));
 				break;
-		    	case 7:	victorSPL.set(0);
+		    	case 7:	pidL.setSetpoint(0);
 						victorSPR.set(-((double)1/(double)6));
 				break;
         }
