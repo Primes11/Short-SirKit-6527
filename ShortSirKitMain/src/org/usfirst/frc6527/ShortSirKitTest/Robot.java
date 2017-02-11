@@ -21,6 +21,7 @@ import org.usfirst.frc6527.ShortSirKitTest.commands.*;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.PIDController;
+import edu.wpi.first.wpilibj.PIDSourceType;
 
 
 /**
@@ -76,10 +77,13 @@ public class Robot extends IterativeRobot {
         this.xboxController = new XboxController(0);
         this.victorSPL = new VictorSP(1);
         this.victorSPR = new VictorSP(0);
-        this.encL = new Encoder(0,1);
-        this.encR = new Encoder(2,3);
-        this.pidL = new PIDController(0.001, 0.1, 0, encL, victorSPL);
-        this.pidR = new PIDController(0.001, 0.1, 0, encR, victorSPR);
+        this.encR = new Encoder(0,1);
+        this.encL = new Encoder(3,2);
+        encR.setPIDSourceType(PIDSourceType.kRate);
+        this.pidL = new PIDController(0.01, 0.1, 0.001, encL, victorSPL);
+        this.pidR = new PIDController(0.01, 0.1, 0.001, encR, victorSPR);
+        //pidL.
+        //pidR.setContinuous();
         CameraServer.getInstance().startAutomaticCapture(0);
         CameraServer.getInstance().startAutomaticCapture(1);
         
@@ -109,17 +113,15 @@ public class Robot extends IterativeRobot {
      */
     public void autonomousPeriodic() {
         Scheduler.getInstance().run();
-        reverse = false;
-        toggle = true;
         
         
     }
 
     public void teleopInit() {
-        // This makes sure that the autonomous stops running when
-        // teleop starts running. If you want the autonomous to
-        // continue until interrupted by another command, remove
-        // this line or comment it out.
+    	reverse = false;
+        toggle = true;
+    	//pidL.enable();
+        pidR.enable();
         if (autonomousCommand != null) autonomousCommand.cancel();
     }
 
@@ -127,6 +129,7 @@ public class Robot extends IterativeRobot {
      * This function is called periodically during operator control
      */
     public void teleopPeriodic() {
+    	System.out.println(encR.getRate());
         Scheduler.getInstance().run();
         double yAxis = xboxController.getRawAxis(1);
         double xAxis = xboxController.getRawAxis(0);
@@ -175,10 +178,10 @@ public class Robot extends IterativeRobot {
 		    			pidR.setSetpoint(((double)1/(double)6));
 				break;
 		    	case 6:	pidL.setSetpoint(((double)1/(double)6));
-						victorSPR.set(-((double)1/(double)6));
+						pidR.setSetpoint(-((double)1/(double)6));
 				break;
 		    	case 7:	pidL.setSetpoint(0);
-						victorSPR.set(-((double)1/(double)6));
+						pidR.setSetpoint(-((double)1/(double)6));
 				break;
         }
         }
