@@ -131,6 +131,7 @@ public class Robot extends IterativeRobot {
     	System.out.println(encR.getRate());
         Scheduler.getInstance().run();
 <<<<<<< HEAD
+<<<<<<< HEAD
         double yAxis = xboxController.getRawAxis(1);
         double xAxis = xboxController.getRawAxis(0);
         if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
@@ -185,6 +186,8 @@ public class Robot extends IterativeRobot {
 				break;
         }
 =======
+=======
+>>>>>>> parent of 58ab5a7... Drive Setup
         if (!(xboxController.getRawButton(5) || xboxController.getRawButton(6))) {
         	victorSPL.set((xboxController.getRawAxis(1) + xboxController.getRawAxis(2)) / 2 / 3);
         	victorSPR.set((xboxController.getRawAxis(1) - xboxController.getRawAxis(2)) / 2 / 3);
@@ -194,6 +197,9 @@ public class Robot extends IterativeRobot {
         }else if (xboxController.getRawButton(6)) {
         	victorSPL.set(0);
         	victorSPR.set(0);
+<<<<<<< HEAD
+>>>>>>> parent of 58ab5a7... Drive Setup
+=======
 >>>>>>> parent of 58ab5a7... Drive Setup
         }
     }
