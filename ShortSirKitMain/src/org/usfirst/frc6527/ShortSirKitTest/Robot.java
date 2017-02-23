@@ -20,6 +20,8 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import org.usfirst.frc6527.ShortSirKitTest.commands.*;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.Servo;
+import edu.wpi.first.wpilibj.Spark;
 
 
 /**
@@ -43,11 +45,18 @@ public class Robot extends IterativeRobot {
      * used for any initialization code.
      */
     
-    private XboxController xboxController;
-    private Encoder encL;
-    private Encoder encR;
-    private VictorSP victorSPL;
-    private VictorSP victorSPR;
+    public XboxController xboxController;
+    public Encoder encL;
+    public Encoder encR;
+    public VictorSP victorSPL;
+    public VictorSP victorSPR;
+    public int counter;
+    public int stage;
+    private boolean toggle;
+    private boolean reverse;
+    public Servo camservo;
+    public Spark dumper;
+    public Spark winch;
     
     public void robotInit() {
     RobotMap.init();
@@ -70,6 +79,17 @@ public class Robot extends IterativeRobot {
         this.xboxController = new XboxController(0);
         this.victorSPL = new VictorSP(1);
         this.victorSPR = new VictorSP(0);
+        this.dumper = new Spark(3);
+        this.winch = new Spark(4);
+        this.encL = new Encoder(2,3);
+        this.encR = new Encoder(0,1);
+        this.counter = 0;
+        this.stage = 0;
+        this.toggle = true;
+        this.reverse = false;
+        this.camservo = new Servo(2);
+        encL.setReverseDirection(true);
+        encR.setReverseDirection(true);
         CameraServer.getInstance().startAutomaticCapture(0);
         CameraServer.getInstance().startAutomaticCapture(1);
         
@@ -80,6 +100,10 @@ public class Robot extends IterativeRobot {
      * You can use it to reset subsystems before shutting down.
      */
     public void disabledInit(){
+    	encR.reset();
+    	encL.reset();
+    	encL.setReverseDirection(true);
+        encR.setReverseDirection(true);
 
     }
 
@@ -89,6 +113,9 @@ public class Robot extends IterativeRobot {
 
     public void autonomousInit() {
         // schedule the autonomous command (example)
+    	counter = -1;encL.reset(); encR.reset();stage = 0;
+    	encL.setReverseDirection(true);
+        encR.setReverseDirection(true);
         if (autonomousCommand != null) autonomousCommand.start();
         
     }
@@ -98,15 +125,47 @@ public class Robot extends IterativeRobot {
      */
     public void autonomousPeriodic() {
         Scheduler.getInstance().run();
+        System.out.println(stage);
+        switch (stage) {
+	        case 0:
+		        	if (encR.get() > counter*5) victorSPR.set(-0.45);
+			        else victorSPR.set(-0.15);
+			        if (encL.get() > counter*5) victorSPL.set(-0.45);
+			        else victorSPL.set(-0.15);
+			        if ((encL.get() <= counter*5) && (encR.get() <= counter*5) && (counter > -700)) counter -= 1;//284
+			        else if (counter <= -700) {stage = 1; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
+			break;/*
+	        case 1:
+		        	if (encR.get() > counter*5) victorSPR.set(-0.45);
+			        else victorSPR.set(-0.20);
+			        if (encL.get() < counter*-5) victorSPL.set(0.45);
+			        else victorSPL.set(0.20);
+			        if ((encL.get() >= counter*-5) && (encR.get() <= counter*5) && (counter > -30)) counter -= 1;
+			        else if (counter <= -30) {stage = 2; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
+		    break;
+	        case 2:
+	        	if (encR.get() > counter*5) victorSPR.set(-0.3);
+		        else victorSPR.set(-0.15);
+		        if (encL.get() > counter*5) victorSPL.set(-0.3);
+		        else victorSPL.set(-0.15);
+		        if ((encL.get() <= counter*5) && (encR.get() <= counter*5) && (counter > -90)) counter -= 1;
+		        else if (counter <= -90) {stage = 3; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
+		    break;*/
+		        
+        }
         
     }
+    
 
     public void teleopInit() {
+    	
         // This makes sure that the autonomous stops running when
         // teleop starts running. If you want the autonomous to
         // continue until interrupted by another command, remove
         // this line or comment it out.
         if (autonomousCommand != null) autonomousCommand.cancel();
+        reverse = false;
+        toggle = true;
     }
 
     /**
@@ -114,22 +173,36 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         Scheduler.getInstance().run();
+        camservo.set(xboxController.getRawAxis(5) / 2 + 0.5);
         double yAxis = xboxController.getRawAxis(1);
         double xAxis = xboxController.getRawAxis(0);
         if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
         if (xAxis < 0.15 && xAxis > -0.15) xAxis = 0;
-        if (xboxController.getRawButton(8)) yAxis *= -1;
+        if (xboxController.getRawButton(4)) winch.set(1);
+        else winch.set(0);
+        if (xboxController.getRawButton(3)) dumper.set(0.5);
+        else dumper.set(-0.5);
+        if (toggle && xboxController.getRawButton(8)) {
+        	toggle = false;
+        	if (reverse) reverse = false;
+        	else reverse = true;
+        } else if(xboxController.getRawButton(8) == false) toggle = true;
+        if (reverse) yAxis *= -1;
+        //if (xboxController.getRawButton(8)) yAxis *= -1;
         int pov = xboxController.getPOV();
         if (-1 != pov) pov /= 45;
         if (!(xboxController.getRawButton(5) || xboxController.getRawButton(6) || -1 != pov)) {
         	victorSPL.set((yAxis - xAxis) / 2 / 3);
         	victorSPR.set((yAxis + xAxis) / 2 / 2.9);
+        	
         } else if (xboxController.getRawButton(6)) {
-        	victorSPL.set(-0.5);
-        	victorSPR.set(-0.5);
+        	victorSPL.set(-1);
+        	victorSPR.set(-1);
+        	
         }else if (xboxController.getRawButton(5)) {
         	victorSPL.set((yAxis - xAxis) / 2);
         	victorSPR.set((yAxis + xAxis) / 2);
+        	
         }else if (-1 != pov){
         	switch (pov) {
 	        	case 0:	victorSPL.set(-((double)1/(double)6));
