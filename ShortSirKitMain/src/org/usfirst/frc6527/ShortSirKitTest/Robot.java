@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Spark;
-
+import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -57,6 +57,7 @@ public class Robot extends IterativeRobot {
     public Servo camservo;
     public Spark dumper;
     public Spark winch;
+    public ADXRS450_Gyro gyro; 
     
     public void robotInit() {
     RobotMap.init();
@@ -88,6 +89,7 @@ public class Robot extends IterativeRobot {
         this.toggle = true;
         this.reverse = false;
         this.camservo = new Servo(2);
+        this.gyro = new ADXRS450_Gyro();
         encL.setReverseDirection(true);
         encR.setReverseDirection(true);
         CameraServer.getInstance().startAutomaticCapture(0);
@@ -173,6 +175,7 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         Scheduler.getInstance().run();
+        System.out.println(getAngle());
         
         //script for dumper, winch and camera
         camservo.set(xboxController.getRawAxis(5) / 2 + 0.5);
