@@ -173,63 +173,67 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         Scheduler.getInstance().run();
+        
+        //script for dumper, winch and camera
         camservo.set(xboxController.getRawAxis(5) / 2 + 0.5);
-        double yAxis = xboxController.getRawAxis(1);
-        double xAxis = xboxController.getRawAxis(0);
-        if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
-        if (xAxis < 0.15 && xAxis > -0.15) xAxis = 0;
         if (xboxController.getRawButton(4)) winch.set(1);
         else winch.set(0);
         if (xboxController.getRawButton(3)) dumper.set(0.5);
         else dumper.set(-0.5);
-        if (toggle && xboxController.getRawButton(8)) {
-        	toggle = false;
-        	if (reverse) reverse = false;
-        	else reverse = true;
-        } else if(xboxController.getRawButton(8) == false) toggle = true;
-        if (reverse) yAxis *= -1;
-        //if (xboxController.getRawButton(8)) yAxis *= -1;
+        
+        double yAxis = xboxController.getRawAxis(1);
+        double xAxis = xboxController.getRawAxis(0);
+        if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
+        if (xAxis < 0.15 && xAxis > -0.15) xAxis = 0;
+        
         int pov = xboxController.getPOV();
         if (-1 != pov) pov /= 45;
         if (!(xboxController.getRawButton(5) || xboxController.getRawButton(6) || -1 != pov)) {
-        	victorSPL.set((yAxis - xAxis) / 2 / 3);
-        	victorSPR.set((yAxis + xAxis) / 2 / 2.9);
-        	
+        	xAxis /= 6;
+        	yAxis /= 6;
         } else if (xboxController.getRawButton(6)) {
-        	victorSPL.set(-1);
-        	victorSPR.set(-1);
-        	
+        	xAxis = 0.0;
+        	yAxis = -0.9;
         }else if (xboxController.getRawButton(5)) {
-        	victorSPL.set((yAxis - xAxis) / 2);
-        	victorSPR.set((yAxis + xAxis) / 2);
-        	
+        	xAxis /= 2;
+        	yAxis /= 2;
         }else if (-1 != pov){
         	switch (pov) {
-	        	case 0:	victorSPL.set(-((double)1/(double)6));
-	        			victorSPR.set(-((double)1/(double)6));
+	        	case 0:	xAxis = 0;
+	        			yAxis = -1/6;
 	        	break;
-	        	case 1:	victorSPL.set(-((double)1/(double)6));
-    					victorSPR.set(0);
+	        	case 1:	xAxis = 1/12;
+    					yAxis = -1/12;
     			break;
-	        	case 2:	victorSPL.set(-((double)1/(double)6));
-    					victorSPR.set(((double)1/(double)6));
+	        	case 2:	xAxis = 1/6;
+    					yAxis = 0;
     			break;
-	        	case 3:	victorSPL.set(((double)1/(double)6));
-    					victorSPR.set(0);
+	        	case 3:	xAxis = 1/12;
+						yAxis = 1/12;
     			break;
-	        	case 4:	victorSPL.set(((double)1/(double)6));
-    					victorSPR.set(((double)1/(double)6));
+	        	case 4:	xAxis = 0;
+    					yAxis = 1/6;
 		    	break;
-		    	case 5:	victorSPL.set(0);
-						victorSPR.set(((double)1/(double)6));
+		    	case 5:	xAxis = -1/12;
+    					yAxis = 1/12;
 				break;
-		    	case 6:	victorSPL.set(((double)1/(double)6));
-						victorSPR.set(-((double)1/(double)6));
+		    	case 6:	xAxis = -1/6;
+    					yAxis = 0;
 				break;
-		    	case 7:	victorSPL.set(0);
-						victorSPR.set(-((double)1/(double)6));
+		    	case 7:	xAxis = -1/12;
+    					yAxis = -1/12;
 				break;
         }
+        	if (toggle && xboxController.getRawButton(8)) {
+            	toggle = false;
+            	if (reverse) reverse = false;
+            	else reverse = true;
+            } else if(xboxController.getRawButton(8) == false) toggle = true;
+            if (reverse) yAxis *= -1;
+            //if (xboxController.getRawButton(8)) yAxis *= -1;
+            
+            victorSPL.set(yAxis - xAxis);
+        	victorSPR.set(yAxis + xAxis);
         }
     }
 
