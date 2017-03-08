@@ -52,8 +52,11 @@ public class Robot extends IterativeRobot {
     public VictorSP victorSPR;
     public int counter;
     public int stage;
-    private boolean toggle;
-    private boolean reverse;
+    public double gyro_offset;
+    public boolean reverse_toggle;
+    public boolean reverse;
+    public int control_scheme;
+    public boolean control_toggle;
     public Servo camservo;
     public Spark dumper;
     public Spark winch;
@@ -86,10 +89,14 @@ public class Robot extends IterativeRobot {
         this.encR = new Encoder(0,1);
         this.counter = 0;
         this.stage = 0;
-        this.toggle = true;
+        this.gyro_offset = 0.0;
+        this.reverse_toggle = true;
+        this.control_scheme = 0;
+        this.control_toggle = true;
         this.reverse = false;
         this.camservo = new Servo(2);
         this.gyro = new ADXRS450_Gyro();
+        gyro.calibrate();
         encL.setReverseDirection(true);
         encR.setReverseDirection(true);
         CameraServer.getInstance().startAutomaticCapture(0);
@@ -128,14 +135,19 @@ public class Robot extends IterativeRobot {
     public void autonomousPeriodic() {
         Scheduler.getInstance().run();
         System.out.println(stage);
+        double xAxis = 0;
+    	double yAxis = 0;
         switch (stage) {
 	        case 0:
-		        	if (encR.get() > counter*5) victorSPR.set(-0.45);
-			        else victorSPR.set(-0.15);
+		        	//if (encR.get() > counter*5) victorSPR.set(-0.45);
+			        xAxis = 0.0;
+			        yAxis = 1.0/6.0;
+			        if ((encL.get() + encR.get()) / 2 < 3500) {stage = 1; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
+			        /*
 			        if (encL.get() > counter*5) victorSPL.set(-0.45);
 			        else victorSPL.set(-0.15);
 			        if ((encL.get() <= counter*5) && (encR.get() <= counter*5) && (counter > -700)) counter -= 1;//284
-			        else if (counter <= -700) {stage = 1; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
+			        else if (counter <= -700) {stage = 1; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}*/
 			break;/*
 	        case 1:
 		        	if (encR.get() > counter*5) victorSPR.set(-0.45);
@@ -153,6 +165,20 @@ public class Robot extends IterativeRobot {
 		        if ((encL.get() <= counter*5) && (encR.get() <= counter*5) && (counter > -90)) counter -= 1;
 		        else if (counter <= -90) {stage = 3; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
 		    break;*/
+        	}
+			gyro_offset += xAxis / 9;
+            
+            xAxis += gyro.getAngle() / -180 + gyro_offset;
+            
+            //script to actually control the motors
+            //System.out.println(xAxis);
+            victorSPL.set(yAxis - xAxis);
+        	victorSPR.set(yAxis + xAxis);
+        	
+        	//reset gyro if greater or less than 10 degrees
+        	if (gyro.getAngle() > 10 || gyro.getAngle() < -10) {
+        		gyro_offset -= gyro.getAngle() / 180;
+        		gyro.reset();
 		        
         }
         
@@ -167,7 +193,7 @@ public class Robot extends IterativeRobot {
         // this line or comment it out.
         if (autonomousCommand != null) autonomousCommand.cancel();
         reverse = false;
-        toggle = true;
+        reverse_toggle = true;
     }
 
     /**
@@ -175,7 +201,11 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         Scheduler.getInstance().run();
-        System.out.println(getAngle());
+        if (xboxController.getRawButton(2)){
+        	gyro_offset = 0;
+    		gyro.reset();
+        }
+        System.out.println(gyro_offset);
         
         //script for dumper, winch and camera
         camservo.set(xboxController.getRawAxis(5) / 2 + 0.5);
@@ -184,8 +214,33 @@ public class Robot extends IterativeRobot {
         if (xboxController.getRawButton(3)) dumper.set(0.5);
         else dumper.set(-0.5);
         
-        double yAxis = xboxController.getRawAxis(1);
-        double xAxis = xboxController.getRawAxis(0);
+        if (control_toggle && xboxController.getRawButton(7)) {
+        	control_toggle = false;
+        	switch (control_scheme){
+        	case 0:
+        		control_scheme = 1;
+        	break;
+        	case 1:
+        		control_scheme = 0;
+        	break;
+        	}
+        	if (reverse) reverse = false;
+        	else reverse = true;
+        } else if(xboxController.getRawButton(7) == false) control_toggle = true;
+        
+        double yAxis = 0;
+        double xAxis = 0;        
+        
+        switch (control_scheme){
+    	case 0:
+    		yAxis = xboxController.getRawAxis(1);
+            xAxis = xboxController.getRawAxis(0);
+    	break;
+    	case 1:
+    		yAxis = xboxController.getRawAxis(3) - xboxController.getRawAxis(2);
+            xAxis = xboxController.getRawAxis(0);
+    	break;
+    	}
         if (yAxis < 0.15 && yAxis > -0.15) yAxis = 0;
         if (xAxis < 0.15 && xAxis > -0.15) xAxis = 0;
         
@@ -194,50 +249,64 @@ public class Robot extends IterativeRobot {
         if (!(xboxController.getRawButton(5) || xboxController.getRawButton(6) || -1 != pov)) {
         	xAxis /= 6;
         	yAxis /= 6;
-        } else if (xboxController.getRawButton(6)) {
+        }else if (xboxController.getRawButton(6)) {
         	xAxis = 0.0;
         	yAxis = -0.9;
         }else if (xboxController.getRawButton(5)) {
-        	xAxis /= 2;
+        	xAxis /= 4;
         	yAxis /= 2;
         }else if (-1 != pov){
         	switch (pov) {
 	        	case 0:	xAxis = 0;
-	        			yAxis = -1/6;
+	        			yAxis = -1.0/6.0;
+	                	System.out.println(pov);
 	        	break;
-	        	case 1:	xAxis = 1/12;
-    					yAxis = -1/12;
+	        	case 1:	xAxis = 1.0/12.0;
+    					yAxis = -1.0/12.0;
     			break;
-	        	case 2:	xAxis = 1/6;
+	        	case 2:	xAxis = 1.0/6.0;
     					yAxis = 0;
     			break;
-	        	case 3:	xAxis = 1/12;
-						yAxis = 1/12;
+	        	case 3:	xAxis = 1.0/12.0;
+						yAxis = 1.0/12.0;
     			break;
 	        	case 4:	xAxis = 0;
-    					yAxis = 1/6;
+    					yAxis = 1.0/6.0;
 		    	break;
-		    	case 5:	xAxis = -1/12;
-    					yAxis = 1/12;
+		    	case 5:	xAxis = -1.0/12.0;
+    					yAxis = 1.0/12.0;
 				break;
-		    	case 6:	xAxis = -1/6;
+		    	case 6:	xAxis = -1.0/6.0;
     					yAxis = 0;
 				break;
-		    	case 7:	xAxis = -1/12;
-    					yAxis = -1/12;
+		    	case 7:	xAxis = -1.0/12.0;
+    					yAxis = -1.0/12.0;
 				break;
-        }
-        	if (toggle && xboxController.getRawButton(8)) {
-            	toggle = false;
+        }}
+        	if (reverse_toggle && xboxController.getRawButton(8)) {
+            	reverse_toggle = false;
             	if (reverse) reverse = false;
             	else reverse = true;
-            } else if(xboxController.getRawButton(8) == false) toggle = true;
+            } else if(xboxController.getRawButton(8) == false) reverse_toggle = true;
             if (reverse) yAxis *= -1;
             //if (xboxController.getRawButton(8)) yAxis *= -1;
             
+            gyro_offset += xAxis / 9;
+            
+            xAxis += gyro.getAngle() / -180 + gyro_offset;
+            
+            //script to actually control the motors
+            //System.out.println(xAxis);
             victorSPL.set(yAxis - xAxis);
         	victorSPR.set(yAxis + xAxis);
-        }
+        	
+        	//reset gyro if greater or less than 10 degrees
+        	if (gyro.getAngle() > 10 || gyro.getAngle() < -10) {
+        		//gyro_offset = 0;
+        		gyro_offset += gyro.getAngle() / -180.0;
+        		gyro.reset();
+
+        	}
     }
 
     /**
