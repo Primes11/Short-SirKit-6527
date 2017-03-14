@@ -144,7 +144,7 @@ public class Robot extends IterativeRobot {
 			        xAxis = 0.0;
 			        yAxis = -1.0/4.5;
 			        if ((encL.get() + encR.get()) / 2 < -3500) {stage = 1; counter = 0; encL.reset(); encR.reset();victorSPL.set(0);victorSPR.set(0);}
-			        //previous line has number, the number is how many degrees it will rotate before stopping.
+			        //previous line has number (-3500), the number is how many degrees it will rotate before stopping.
 			        /*
 			        if (encL.get() > counter*5) victorSPL.set(-0.45);
 			        else victorSPL.set(-0.15);
@@ -262,7 +262,6 @@ public class Robot extends IterativeRobot {
         	switch (pov) {
 	        	case 0:	xAxis = 0;
 	        			yAxis = -1.0/6.0;
-	                	System.out.println(pov);
 	        	break;
 	        	case 1:	xAxis = 1.0/12.0;
     					yAxis = -1.0/12.0;
@@ -290,7 +289,7 @@ public class Robot extends IterativeRobot {
             	reverse_toggle = false;
             	if (reverse) reverse = false;
             	else reverse = true;
-            } else if(xboxController.getRawButton(8) == false) reverse_toggle = true;
+            } else if(!xboxController.getRawButton(8)) reverse_toggle = true;
         	
             if (reverse) yAxis = yAxis * -1.0; //reverses yAxis
             
